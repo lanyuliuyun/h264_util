@@ -1,41 +1,44 @@
 
 #include "h264_frame_split.h"
-#include "util/log.h"
-
-#include <stdlib.h>
 
 void h264_frame_split(const unsigned char *frame, int len, nalu_sink_f nalu_sink, void* userdata)
 {
 	const unsigned char *byte;
-	unsigned int next3byte;
+	unsigned int next4bytes;
 	const unsigned char *nalu1_begin;
 	const unsigned char *nalu2_begin;
-
-	if (NULL == frame || 0 == len || NULL == nalu_sink)
-	{
-		log_error("h264_frame_split: bad frame(%p) or bad len(%u) or bad nalu_sink(%p)", frame, len, nalu_sink);
-		return;
-	}
 	
+	/* H264白皮书 B.1.2 节对 NALU 语义结构说明如下
+	 *
+	 * leading_zero_8bits: 0x00 当 NALU 为字节流的第一个 NALU 时包含
+	 * zero_byte: 0x00 当 NALU 为 SPS/PPS, 或为 Access Unit 的第一个 NALU 时包含
+	 * start_code_prefix_one_3bytes: 0x000001, NALU 起始码前缀
+	 *  < 具体的 NALU 数据 >
+	 * trailing_zero_8bits: 0x00
+	 *
+	 * 综上述条件，可以看出具体的 NALU 数据是被 0x00000001 所分割的，或额外包含 0 字节
+	 * 下述分割过程既是基于上述结构来进行的
+	 */
+
 	byte = frame;
-	while (byte < (frame+len))
+	while ((byte+4) < (frame+len))
 	{
-		next3byte = byte[0] << 16 | byte[1] << 8 | byte[2];
+		next4bytes = (byte[0] << 24) | (byte[1] << 16) | (byte[2] << 8) | byte[3];
 		
-		/* 寻找start_code_prefix_one_3bytes */
-		if (next3byte != 0x000001)
+		if (next4bytes != 0x00000001)
 		{
 			byte++;
 			continue;
 		}
 		
-		nalu1_begin = byte + 3;
+		/* 跳过自身的 start_code_prefix_one_3bytes，以及 leading_zero_8bits 或前一个 NALU 的 trailing_zero_8bits */
+		nalu1_begin = byte + 4;
 		
 		nalu2_begin = nalu1_begin + 1;		/* 跳过nalu_type字节 */
-		while (nalu2_begin < (frame+len))
+		while ((nalu2_begin+4) < (frame+len))
 		{
-			next3byte = nalu2_begin[0] << 16 | nalu2_begin[1] << 8 | nalu2_begin[2];
-			if (next3byte == 0x000001)
+			next4bytes = (nalu2_begin[0] << 24) | (nalu2_begin[1] << 16) | (nalu2_begin[2] << 8) | nalu2_begin[3];
+			if (next4bytes == 0x00000001)
 			{
 				break;
 			}
@@ -43,15 +46,24 @@ void h264_frame_split(const unsigned char *frame, int len, nalu_sink_f nalu_sink
 			nalu2_begin++;
 		}
 		
-		if (nalu2_begin == (frame+len))
+		if ((nalu2_begin+4) == (frame+len))
 		{
-			/* nalu1_begin指向的NAL unit已经是当前帧中的最后一个NAL unit */
-			nalu_sink(nalu1_begin, (nalu2_begin - nalu1_begin), 1, userdata);
+			/* nalu1_begin 指向的 NALU 已经是当前帧中的最后一个 NALU */
+			
+			if (next4bytes == 0x00000001)
+			{
+				nalu_sink(nalu1_begin, (nalu2_begin - nalu1_begin), 1, userdata);
+			}
+			else
+			{
+				nalu_sink(nalu1_begin, (frame+len - nalu1_begin), 1, userdata);
+			}
+
 			break;
 		}
 		else
 		{
-			/* nalu2_begin是指向下一个nalu的start_code_prefix */
+			/* nalu2_begin 是指向下一个nalu的start_code_prefix */
 			byte = nalu2_begin;
 	
 			nalu_sink(nalu1_begin, (nalu2_begin - nalu1_begin), 0, userdata);
