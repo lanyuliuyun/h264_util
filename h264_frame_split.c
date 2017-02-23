@@ -7,49 +7,51 @@ void h264_frame_split(const unsigned char *frame, int len, nalu_sink_f nalu_sink
 	unsigned int next4bytes;
 	const unsigned char *nalu1_begin;
 	const unsigned char *nalu2_begin;
-	
-	/* H264°×Æ¤Êé B.1.2 ½Ú¶Ô NALU ÓïÒå½á¹¹ËµÃ÷ÈçÏÂ
+
+	/* H264ç™½çš®ä¹¦ B.1.2 èŠ‚å¯¹ NALU è¯­ä¹‰ç»“æ„è¯´æ˜å¦‚ä¸‹
 	 *
-	 * leading_zero_8bits: 0x00 µ± NALU Îª×Ö½ÚÁ÷µÄµÚÒ»¸ö NALU Ê±°üº¬
-	 * zero_byte: 0x00 µ± NALU Îª SPS/PPS, »òÎª Access Unit µÄµÚÒ»¸ö NALU Ê±°üº¬
-	 * start_code_prefix_one_3bytes: 0x000001, NALU ÆğÊ¼ÂëÇ°×º
-	 *  < ¾ßÌåµÄ NALU Êı¾İ >
+	 * leading_zero_8bits: 0x00 å½“ NALU ä¸ºå­—èŠ‚æµçš„ç¬¬ä¸€ä¸ª NALU æ—¶åŒ…å«
+	 * zero_byte: 0x00 å½“ NALU ä¸º SPS/PPS, æˆ–ä¸º Access Unit çš„ç¬¬ä¸€ä¸ª NALU æ—¶åŒ…å«
+	 * start_code_prefix_one_3bytes: 0x000001, NALU èµ·å§‹ç å‰ç¼€
+	 *  < å…·ä½“çš„ NALU æ•°æ® >
 	 * trailing_zero_8bits: 0x00
 	 *
-	 * ×ÛÉÏÊöÌõ¼ş£¬¿ÉÒÔ¿´³ö¾ßÌåµÄ NALU Êı¾İÊÇ±» 0x00000001 Ëù·Ö¸îµÄ£¬»ò¶îÍâ°üº¬ 0 ×Ö½Ú
-	 * ÏÂÊö·Ö¸î¹ı³Ì¼ÈÊÇ»ùÓÚÉÏÊö½á¹¹À´½øĞĞµÄ
+	 * ç»¼ä¸Šè¿°æ¡ä»¶ï¼Œå¯ä»¥çœ‹å‡ºå…·ä½“çš„ NALU æ•°æ®æ˜¯è¢« 0x00000001 æ‰€åˆ†å‰²çš„ï¼Œæˆ–é¢å¤–åŒ…å« 0 å­—èŠ‚
+	 * ä¸‹è¿°åˆ†å‰²è¿‡ç¨‹æ—¢æ˜¯åŸºäºä¸Šè¿°ç»“æ„æ¥è¿›è¡Œçš„
 	 */
 
 	byte = frame;
 	while ((byte+4) < (frame+len))
 	{
-		next4bytes = (byte[0] << 24) | (byte[1] << 16) | (byte[2] << 8) | byte[3];
-		
+		next4bytes = ((unsigned int)byte[0] << 24) | ((unsigned int)byte[1] << 16) |
+            ((unsigned int)byte[2] << 8) | (unsigned int)byte[3];
+
 		if (next4bytes != 0x00000001)
 		{
 			byte++;
 			continue;
 		}
-		
-		/* Ìø¹ı×ÔÉíµÄ start_code_prefix_one_3bytes£¬ÒÔ¼° leading_zero_8bits »òÇ°Ò»¸ö NALU µÄ trailing_zero_8bits */
+
+		/* è·³è¿‡è‡ªèº«çš„ start_code_prefix_one_3bytesï¼Œä»¥åŠ leading_zero_8bits æˆ–å‰ä¸€ä¸ª NALU çš„ trailing_zero_8bits */
 		nalu1_begin = byte + 4;
-		
-		nalu2_begin = nalu1_begin + 1;		/* Ìø¹ınalu_type×Ö½Ú */
+
+		nalu2_begin = nalu1_begin + 1;		/* è·³è¿‡nalu_typeå­—èŠ‚ */
 		while ((nalu2_begin+4) < (frame+len))
 		{
-			next4bytes = (nalu2_begin[0] << 24) | (nalu2_begin[1] << 16) | (nalu2_begin[2] << 8) | nalu2_begin[3];
+			next4bytes = ((unsigned int)nalu2_begin[0] << 24) | ((unsigned int)nalu2_begin[1] << 16) |
+                ((unsigned int)nalu2_begin[2] << 8) | (unsigned int)nalu2_begin[3];
 			if (next4bytes == 0x00000001)
 			{
 				break;
 			}
-			
+
 			nalu2_begin++;
 		}
-		
+
 		if ((nalu2_begin+4) == (frame+len))
 		{
-			/* nalu1_begin Ö¸ÏòµÄ NALU ÒÑ¾­ÊÇµ±Ç°Ö¡ÖĞµÄ×îºóÒ»¸ö NALU */
-			
+			/* nalu1_begin æŒ‡å‘çš„ NALU å·²ç»æ˜¯å½“å‰å¸§ä¸­çš„æœ€åä¸€ä¸ª NALU */
+
 			if (next4bytes == 0x00000001)
 			{
 				nalu_sink(nalu1_begin, (nalu2_begin - nalu1_begin), 1, userdata);
@@ -63,9 +65,9 @@ void h264_frame_split(const unsigned char *frame, int len, nalu_sink_f nalu_sink
 		}
 		else
 		{
-			/* nalu2_begin ÊÇÖ¸ÏòÏÂÒ»¸önaluµÄstart_code_prefix */
+			/* nalu2_begin æ˜¯æŒ‡å‘ä¸‹ä¸€ä¸ªnaluçš„start_code_prefix */
 			byte = nalu2_begin;
-	
+
 			nalu_sink(nalu1_begin, (nalu2_begin - nalu1_begin), 0, userdata);
 		}
 	}

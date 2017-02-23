@@ -1,5 +1,5 @@
 
-/* ÊµÏÖ´ÓÒ»¸öH264ÂãÂëÁ÷Êı¾İÖ¡ÖĞ·ÖÀë³öNALU */
+/* å®ç°ä»ä¸€ä¸ªH264è£¸ç æµæ•°æ®å¸§ä¸­åˆ†ç¦»å‡ºNALU */
 
 #ifndef H264_FRAME_SPLIT_H
 #define H264_FRAME_SPLIT_H
@@ -8,12 +8,12 @@
 extern "C" {
 #endif
 
-/* last²ÎÊı±êÊ¾µ±Ç°naluÊÇ·ñÊÇÍ¼ÏñÖ¡µÄ×îºóÒ»¸önalu */
+/* lastå‚æ•°æ ‡ç¤ºå½“å‰naluæ˜¯å¦æ˜¯å›¾åƒå¸§çš„æœ€åä¸€ä¸ªnalu */
 typedef void (*nalu_sink_f)(const unsigned char *nalu, unsigned len, int is_last, void *uerdata);
 
-/* ¿Éµ÷ÓÃ´Ëº¯Êı´¦ÀíÒ»Ö¡H.264ÂãÂëÁ÷Êı¾İ£¬·ÖÀë³öµÄNALUµ¥ÔªÍ¨¹ıÌá¹©µÄ»Øµ÷·µ»Ø¸øuser
- * ·ÖÀë³öµÄNALU½á¹¹ÊÇH.264°×Æ¤Êé"B.1.1×Ö½ÚÁ÷NALµ¥ÔªÓï·¨"ÖĞnal_unit²¿·Ö,
- * ²»°üº¬leading_zero_8bits/zero_byte/start_code_prefix_one_3bytes
+/* å¯è°ƒç”¨æ­¤å‡½æ•°å¤„ç†ä¸€å¸§H.264è£¸ç æµæ•°æ®ï¼Œåˆ†ç¦»å‡ºçš„NALUå•å…ƒé€šè¿‡æä¾›çš„å›è°ƒè¿”å›ç»™user
+ * åˆ†ç¦»å‡ºçš„NALUç»“æ„æ˜¯H.264ç™½çš®ä¹¦"B.1.1å­—èŠ‚æµNALå•å…ƒè¯­æ³•"ä¸­nal_unitéƒ¨åˆ†,
+ * ä¸åŒ…å«leading_zero_8bits/zero_byte/start_code_prefix_one_3bytes
  */
 void h264_frame_split(const unsigned char *frame, int len, nalu_sink_f nalu_sink, void* userdata);
 
